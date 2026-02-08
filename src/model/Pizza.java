@@ -1,13 +1,15 @@
 package model;
 import java.util.ArrayList;
 import java.util.List;
+import java.io.Serializable;
 
-public class Pizza {
+public class Pizza implements Serializable {
+    private static final long serialVersionUID = 1L;
     private String tamanho; // B, M, G, XGG
     private List<Sabor> sabores = new ArrayList<>();
     private List<String> ingredientesExcluidos = new ArrayList<>();
 
-    public Pizza(String tamanho) { this.tamanho = tamanho; }
+    public Pizza(String tamanho, double valorBase) { this.tamanho = tamanho; }
 
     public void adicionarSabor(Sabor sabor) {
         if (tamanho.equals("G") && sabores.size() >= 2) throw new IllegalArgumentException("G pode no máximo 2 sabores.");
@@ -51,5 +53,9 @@ public class Pizza {
 
     public void setIngredientesExcluidos(List<String> ingredientesExcluidos) {
         this.ingredientesExcluidos = ingredientesExcluidos;
+    }
+
+    public char[] getTamanho() {
+        return tamanho.toCharArray();
     }
 }
