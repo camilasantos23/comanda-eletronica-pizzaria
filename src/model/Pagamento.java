@@ -1,10 +1,15 @@
 package model;
-
+import java.io.Serializable;
 import java.util.UUID;
 
-public class Pagamento {
+public class Pagamento implements Serializable {
+    private static final long serialVersionUID = 1L;
     private String tipo; // Pix, Dinheiro, Cartão
     private double valorPago;
+
+    public Pagamento(String selectedItem) {
+        this.tipo = selectedItem;
+    }
 
     public String processar(double total) {
         if (tipo.equalsIgnoreCase("Pix")) {

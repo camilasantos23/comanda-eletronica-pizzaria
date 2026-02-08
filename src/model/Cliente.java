@@ -1,15 +1,18 @@
 package model;
+import java.io.Serializable;
 
-public class Cliente {
+public class Cliente implements  Serializable {
+    private static final long serialVersionUID = 1L;
 
     private int id;
     private String nome;
-    private String telefone;
+    private String endereco;
 
-    public Cliente(int id, String nome, String telefone) {
+    public Cliente(int id, String nome, String endereco) {
         this.id = id;
         this.nome = nome;
-        this.telefone = telefone;
+        this.endereco = endereco;
+
     }
 
     public int getId() {
@@ -25,22 +28,25 @@ public class Cliente {
     public void setNome(String nome){
         this.nome = nome;
     }
-    public String getTelefone(){
-        return telefone;
+
+
+    public void setEndereco(String endereco) {
+        this.endereco = endereco;
+
     }
 
-    public void setTelefone(String telefone) {
-        this.telefone = telefone;
-    }
+
 
     @Override
     public String toString(){
-        return id + ";" + nome + ";" + telefone;
+        return id + ";" + nome ;
     }
 
 
     public Object getEndereco() {
-
-        return null;
+        return endereco;
     }
+
+
+
 }
