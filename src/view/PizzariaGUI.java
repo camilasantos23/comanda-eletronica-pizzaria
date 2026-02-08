@@ -15,8 +15,11 @@ public class PizzariaGUI extends JFrame {
     private JTextField txtNome, txtEndereco, txtTroco;
     private JLabel lblTotal, lblPix;
     private JComboBox<String> comboTamanho, comboPagto;
+    private JCheckBox chkPrecisaTroco; // Nova CheckBox para troco [12.10.1]
     private JPanel panelTroco;
+
     private double valorBase = 0.0;
+    private double adicionalPremium = 0.0;
 
     private List<JCheckBox> chkSimples = new ArrayList<>();
     private List<JCheckBox> chkPremium = new ArrayList<>();
@@ -27,25 +30,25 @@ public class PizzariaGUI extends JFrame {
         setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        // 1. TÍTULO ESTILIZADO
+        // 1. TÍTULO
         JLabel titulo = new JLabel("Pizzaria Express", SwingConstants.CENTER);
         titulo.setFont(new Font("Arial", Font.BOLD, 24));
         titulo.setForeground(Color.RED);
         titulo.setAlignmentX(Component.CENTER_ALIGNMENT);
         add(titulo);
 
-        // 2. SEÇÃO: DADOS DO CLIENTE (Apenas Endereço)
+        // 2. DADOS DO CLIENTE [12.6]
         JPanel secCliente = criarSecao("Dados do Cliente");
         secCliente.setLayout(new GridLayout(2, 2, 5, 5));
         secCliente.add(new JLabel("Nome:"));
         txtNome = new JTextField(20);
         secCliente.add(txtNome);
-        secCliente.add(new JLabel("Endereço de Entrega:"));
+        secCliente.add(new JLabel("Endereço:"));
         txtEndereco = new JTextField(20);
         secCliente.add(txtEndereco);
         add(secCliente);
 
-        // 3. SEÇÃO: TAMANHO [12.11]
+        // 3. TAMANHO [12.11]
         JPanel secTamanho = criarSecao("1. Escolha o Tamanho");
         String[] tamanhos = {"B - R$ 25,00", "M - R$ 35,00", "G - R$ 45,00", "EXGG - R$ 60,00"};
         comboTamanho = new JComboBox<>(tamanhos);
@@ -53,7 +56,7 @@ public class PizzariaGUI extends JFrame {
         secTamanho.add(comboTamanho);
         add(secTamanho);
 
-        // 4. SEÇÃO: SABORES [12.10.1]
+        // 4. SABORES
         JPanel secSabores = criarSecao("2. Escolha os Sabores (G:2 / EXGG:3)");
         secSabores.setLayout(new GridLayout(0, 2));
         String[] simples = {"Mussarela", "Calabresa", "Portuguesa", "Frango", "Margherita", "Napolitana"};
@@ -73,7 +76,7 @@ public class PizzariaGUI extends JFrame {
         }
         add(secSabores);
 
-        // 5. SEÇÃO: REMOVER INGREDIENTES
+        // 5. REMOVER INGREDIENTES
         JPanel secRemover = criarSecao("3. Remover Ingredientes");
         String[] itens = {"Cebola", "Tomate", "Azeitona", "Orégano"};
         for (String item : itens) {
@@ -83,31 +86,50 @@ public class PizzariaGUI extends JFrame {
         }
         add(secRemover);
 
-        // 6. SEÇÃO: PAGAMENTO
+        // 6. PAGAMENTO E LÓGICA DE TROCO [12.11, 12.10.1]
         JPanel secPagto = criarSecao("4. Forma de Pagamento");
         String[] pagtos = {"Cartão", "Pix", "Dinheiro"};
         comboPagto = new JComboBox<>(pagtos);
+
         lblPix = new JLabel("Chave PIX: ");
         lblPix.setVisible(false);
+
+        chkPrecisaTroco = new JCheckBox("Precisa de troco?");
+        chkPrecisaTroco.setVisible(false);
+
         panelTroco = new JPanel();
-        panelTroco.add(new JLabel("Troco para:"));
+        panelTroco.add(new JLabel("Pagar com: R$"));
         txtTroco = new JTextField(5);
         panelTroco.add(txtTroco);
         panelTroco.setVisible(false);
 
         comboPagto.addActionListener(e -> {
             String sel = (String) comboPagto.getSelectedItem();
+            boolean eDinheiro = sel.equals("Dinheiro");
             lblPix.setVisible(sel.equals("Pix"));
             if(sel.equals("Pix")) lblPix.setText("Chave: " + UUID.randomUUID().toString());
-            panelTroco.setVisible(sel.equals("Dinheiro"));
+
+            chkPrecisaTroco.setVisible(eDinheiro);
+            if (!eDinheiro) {
+                panelTroco.setVisible(false);
+                chkPrecisaTroco.setSelected(false);
+            }
+            revalidate();
+            repaint();
+        });
+
+        chkPrecisaTroco.addActionListener(e -> {
+            panelTroco.setVisible(chkPrecisaTroco.isSelected());
             revalidate();
         });
+
         secPagto.add(comboPagto);
         secPagto.add(lblPix);
+        secPagto.add(chkPrecisaTroco);
         secPagto.add(panelTroco);
         add(secPagto);
 
-        // 7. RODAPÉ: TOTAL E CONFIRMAÇÃO
+        // 7. RODAPÉ
         lblTotal = new JLabel("Total: R$ 0,00");
         lblTotal.setFont(new Font("Arial", Font.BOLD, 18));
         lblTotal.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -140,57 +162,66 @@ public class PizzariaGUI extends JFrame {
         else if (sel.startsWith("G")) valorBase = 45.0;
         else valorBase = 60.0;
 
-        double adicional = 0;
+        adicionalPremium = 0;
         int contSabor = 0;
         for (JCheckBox cb : chkSimples) if (cb.isSelected()) contSabor++;
         for (JCheckBox cb : chkPremium) {
             if (cb.isSelected()) {
                 contSabor++;
-                adicional += 2.0;
+                adicionalPremium += 2.0;
             }
         }
 
         int limite = sel.startsWith("G") ? 2 : (sel.startsWith("EXGG") ? 3 : 1);
         if (contSabor > limite) {
-            JOptionPane.showMessageDialog(this, "O tamanho " + sel + " permite apenas " + limite + " sabores!", "Aviso", JOptionPane.WARNING_MESSAGE);
+            throw new LimiteSaboresExcedidoException("O tamanho " + sel + " permite apenas " + limite + " sabores!");
         }
-        lblTotal.setText(String.format("Total: R$ %.2f", valorBase + adicional));
+
+        lblTotal.setText(String.format("Total: R$ %.2f", valorBase + adicionalPremium));
     }
 
     private void finalizarPedido() {
         try {
-            if (txtNome.getText().trim().isEmpty()) throw new CampoObrigatorioException("O nome é obrigatório!");
-            if (txtEndereco.getText().trim().isEmpty()) throw new CampoObrigatorioException("O endereço de entrega é obrigatório!");
+            if (txtNome.getText().trim().isEmpty()) throw new CampoObrigatorioException("Nome é obrigatório!");
+            if (txtEndereco.getText().trim().isEmpty()) throw new CampoObrigatorioException("Endereço é obrigatório!");
 
-            // Instanciação do Modelo (MVC)
+            double totalGeral = valorBase + adicionalPremium;
+            String infoTroco = "Não precisa.";
+
+            // Lógica de Cálculo do Troco [2.7, 11.3]
+            if (comboPagto.getSelectedItem().equals("Dinheiro") && chkPrecisaTroco.isSelected()) {
+                if (txtTroco.getText().isEmpty()) throw new CampoObrigatorioException("Informe o valor para o troco!");
+
+                double valorPago = Double.parseDouble(txtTroco.getText().replace(",", "."));
+                if (valorPago < totalGeral) {
+                    throw new IllegalArgumentException("Valor pago é insuficiente!");
+                }
+                infoTroco = String.format("R$ %.2f", valorPago - totalGeral);
+            }
+
+            // Instanciação e Persistência [15.5.1]
             Cliente cliente = new Cliente(1, txtNome.getText(), "");
             cliente.setEndereco(txtEndereco.getText());
-            Pizza pizza = new Pizza((String) comboTamanho.getSelectedItem(), valorBase);
+            Pizza pizza = new Pizza((String) comboTamanho.getSelectedItem(), totalGeral);
 
             List<String> removidos = new ArrayList<>();
             for (JCheckBox cb : chkRemover) if (cb.isSelected()) removidos.add(cb.getText());
             pizza.setIngredientesExcluidos(removidos);
 
             Pedido pedido = new Pedido(pizza, new Pagamento((String) comboPagto.getSelectedItem()), cliente);
-
-            // Persistência (DAO) [15.5.1]
             dao.salvar(pedido);
 
-            // Chama o campo de confirmação baseado na imagem
-            exibirConfirmacao(pedido);
+            exibirConfirmacao(pedido, infoTroco);
 
-        } catch (CampoObrigatorioException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro no Pedido", JOptionPane.ERROR_MESSAGE);
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao salvar: " + ex.getMessage());
+        } catch (NumberFormatException nfe) {
+            JOptionPane.showMessageDialog(this, "Digite um valor numérico válido para o troco!", "Erro", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    private void exibirConfirmacao(Pedido pedido) {
-        JDialog dialog = new JDialog(this, "Confirmação", true);
-        dialog.setLayout(new BorderLayout());
-
-        // Painel principal com BoxLayout para empilhamento vertical [1032, 12.18]
+    private void exibirConfirmacao(Pedido pedido, String troco) {
+        JDialog dialog = new JDialog(this, "Pedido Recebido", true);
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBackground(Color.WHITE);
@@ -207,33 +238,34 @@ public class PizzariaGUI extends JFrame {
         lblIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
         mainPanel.add(lblIcon);
 
-        mainPanel.add(Box.createVerticalStrut(10)); // Espaço entre ícone e título
+        mainPanel.add(Box.createVerticalStrut(10));
 
-        // 2. Título "Pedido Confirmado!"
+
         JLabel lblStatus = new JLabel("Pedido Confirmado!");
-        lblStatus.setFont(new Font("Arial", Font.BOLD, 22));
-       // Força a centralização no BoxLayout [12.18]
+        lblStatus.setFont(new Font("Arial", Font.BOLD, 18));
         lblStatus.setAlignmentX(Component.CENTER_ALIGNMENT);
         mainPanel.add(lblStatus);
-
-       // 3. Frase "Seu pedido foi recebido com sucesso"
+        // 3. Frase "Seu pedido foi recebido com sucesso"
         JLabel lblSub = new JLabel("Seu pedido foi recebido com sucesso");
         lblSub.setFont(new Font("Arial", Font.PLAIN, 14));
         lblSub.setForeground(Color.GRAY);
-       // Garante que a frase também fique centralizada [1]
+        // Garante que a frase também fique centralizada [1]
         lblSub.setAlignmentX(Component.CENTER_ALIGNMENT);
         mainPanel.add(lblSub);
 
-        mainPanel.add(Box.createVerticalStrut(20));
-        mainPanel.add(new JSeparator()); // Linha divisória conforme captura [1]
+        mainPanel.add(new JSeparator());
 
-        // Informações estruturadas
+
+        // CONSTRUÇÃO DO RECIBO [12.20]
         JTextArea recibo = new JTextArea();
         recibo.setEditable(false);
         recibo.setFont(new Font("Monospaced", Font.PLAIN, 12));
 
         StringBuilder sb = new StringBuilder();
-        sb.append("DETALHES DA PIZZA: ").append(pedido.getPizza().getTamanho()).append("\n");
+        sb.append("CLIENTE: ").append(pedido.getCliente().getNome()).append("\n");
+        sb.append("ENDEREÇO: ").append(pedido.getCliente().getEndereco()).append("\n");
+        sb.append("------------------------------\n");
+        sb.append("PIZZA: ").append(pedido.getPizza().getTamanho()).append("\n");
         sb.append("SABORES SELECIONADOS:\n");
         for (JCheckBox cb : chkSimples) if (cb.isSelected()) sb.append(" - ").append(cb.getText()).append("\n");
         for (JCheckBox cb : chkPremium) if (cb.isSelected()) sb.append(" - ").append(cb.getText()).append(" (★)\n");
@@ -242,22 +274,18 @@ public class PizzariaGUI extends JFrame {
             sb.append("REMOVER: ").append(String.join(", ", pedido.getPizza().getIngredientesExcluidos())).append("\n");
         }
 
-        sb.append("\nENTREGA (Delivery):\n");
-        sb.append(" ").append(pedido.getCliente().getNome()).append("\n");
-        sb.append(" ").append(pedido.getCliente().getEndereco()).append("\n");
-
-        sb.append("\nFORMA DE PAGAMENTO: ").append(comboPagto.getSelectedItem()).append("\n");
-        if (comboPagto.getSelectedItem().equals("Pix")) sb.append(" ").append(lblPix.getText()).append("\n");
+        sb.append("\nPAGAMENTO: ").append(pedido.getPagamento().getTipo()).append("\n");
+        if (pedido.getPagamento().getTipo().equals("Dinheiro")) {
+            sb.append("TROCO: ").append(troco).append("\n");
+        }
 
         sb.append("\nTOTAL A PAGAR: ").append(lblTotal.getText());
-
         recibo.setText(sb.toString());
-        mainPanel.add(new JScrollPane(recibo));
 
-        JButton btnFechar = new JButton("Fazer Novo Pedido");
-        btnFechar.addActionListener(e -> dialog.dispose());
-        mainPanel.add(Box.createVerticalStrut(10));
-        mainPanel.add(btnFechar);
+        mainPanel.add(new JScrollPane(recibo));
+        JButton btnOk = new JButton("Novo Pedido");
+        btnOk.addActionListener(e -> dialog.dispose());
+        mainPanel.add(btnOk);
 
         dialog.add(mainPanel);
         dialog.setSize(350, 500);

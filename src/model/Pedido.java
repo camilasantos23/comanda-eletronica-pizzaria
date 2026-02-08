@@ -27,4 +27,8 @@ public class Pedido implements Serializable {
     public Pizza getPizza() {
         return pizza;
     }
+
+    public Pagamento getPagamento() {
+        return  pagamento;
+    }
 }
