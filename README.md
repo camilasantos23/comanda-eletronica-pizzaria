@@ -27,6 +27,7 @@ O projeto consiste em uma aplicação desktop para automação de comandas de pi
 • Opções: Cartão, Pix e Dinheiro.
 • Pix: Geração automática de chave aleatória (UUID) na interface.
 • Dinheiro: Campo dinâmico para cálculo de troco.
+
 4. Confirmação e Recibo Visual
 • Após a confirmação, o sistema exibe um recibo detalhado em um diálogo personalizado.
 • O recibo inclui ícone visual de sucesso, resumo da pizza, lista de sabores, ingredientes removidos, endereço de entrega e valor total.
